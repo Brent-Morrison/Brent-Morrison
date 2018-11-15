@@ -1,4 +1,4 @@
-year,mth,cust,unit,type,stage,poci,gca,ledbal,ecl,wo,pryr,prlt,Notes
+year,mth,cust,unit,type,stage,poci,gca,bal,ecl,wof,pryr,prlt,Notes
 2017,12,4000001,5000,rvlv,2,N,7500,7500,-1500,NA,NA,NA,open
 2018,1,4000001,5000,rvlv,3,N,7500,7500,-3000,NA,NA,NA,downgrade
 2018,2,4000001,5000,rvlv,NA,NA,0,0,0,4000,NA,NA,"charge, full write-off, no stage"
