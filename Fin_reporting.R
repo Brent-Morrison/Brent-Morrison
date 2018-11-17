@@ -100,42 +100,42 @@ bln_mvnt <- bln_ctgy %>% group_by(cust) %>%
          gca.m.tfr.o  = -case_when(ctgy.dir != 'U' & pre.post == 'pre' ~ g.tfr.pre,
                                    ctgy.dir != 'U' & pre.post == 'post' ~ gca.op,
                                    TRUE ~ 0),
-         gca.m.tfr.i = -gca.m.tfr.o,
-         i.y86.1a = -cover * gca.m.dd.r,
-         i.y86.1b = -cover * gca.m.dd.t,
-         i.y84a   = -cover * gca.m.rd.t.f,
-         i.y84b.t = -cover * gca.m.rd.t,
-         i.y84b.r = -cover * gca.m.rd.r,
-         i.Z04    = wof.cl,
-         i.Y82    = case_when(ctgy.cl == 1 & pryr != 0 ~ ecl.cl + pryr,
-                              ctgy.cl != 1 & prlt != 0 ~ ecl.cl + prlt,
-                              TRUE ~ 0),
-         i.y83.1  = if_else(ctgy.dir != 'U', ecl.cl - ecl.op - i.y86.1a - i.y86.1b - i.y84a - i.y84b.t - i.y84b.r - i.Z04 - i.Y82, 0),
-         i.y83.2  = if_else(ctgy.dir == 'U', ecl.cl - ecl.op - i.y86.1a - i.y86.1b - i.y84a - i.y84b.t - i.y84b.r - i.Z04 - i.Y82, 0),
-         i.tfr_pre= ecl.op + i.y86.1a + i.y86.1b + i.y84a + i.y84b.t + i.y84b.r,
-         i.tfr_out= -case_when(ctgy.dir != 'U' & pre.post == 'pre' ~ i.tfr_pre,
-                               ctgy.dir != 'U' & pre.post == 'post' ~ ecl.op,
-                               TRUE ~ 0),
-         i.tfr_in = -i.tfr_out) %>% ungroup() %>% 
-  select(-g.tfr.pre, -i.tfr_pre) %>% 
+         gca.m.tfr.i  = -gca.m.tfr.o,
+         ecl.m.dd.r   = -cover * gca.m.dd.r,
+         ecl.m.dd.t   = -cover * gca.m.dd.t,
+         ecl.m.rd.t.f = -cover * gca.m.rd.t.f,
+         ecl.m.rd.t   = -cover * gca.m.rd.t,
+         ecl.m.rd.r   = -cover * gca.m.rd.r,
+         ecl.m.wof    = wof.cl,
+         ecl.m.prm    = case_when(ctgy.cl == 1 & pryr != 0 ~ ecl.cl + pryr,
+                                  ctgy.cl != 1 & prlt != 0 ~ ecl.cl + prlt,
+                                  TRUE ~ 0),
+         ecl.m.rem.mig= if_else(ctgy.dir != 'U', ecl.cl - ecl.op - ecl.m.dd.r - ecl.m.dd.t - ecl.m.rd.t.f - ecl.m.rd.t - ecl.m.rd.r - ecl.m.wof - ecl.m.prm, 0),
+         ecl.m.rem    = if_else(ctgy.dir == 'U', ecl.cl - ecl.op - ecl.m.dd.r - ecl.m.dd.t - ecl.m.rd.t.f - ecl.m.rd.t - ecl.m.rd.r - ecl.m.wof - ecl.m.prm, 0),
+         ecl.tfr.pre  = ecl.op + ecl.m.dd.r + ecl.m.dd.t + ecl.m.rd.t.f + ecl.m.rd.t + ecl.m.rd.r,
+         ecl.m.tfr.o  = -case_when(ctgy.dir != 'U' & pre.post == 'pre' ~ ecl.tfr.pre,
+                                   ctgy.dir != 'U' & pre.post == 'post' ~ ecl.op,
+                                   TRUE ~ 0),
+         ecl.m.tfr.i = -ecl.m.tfr.o) %>% ungroup() %>% 
+  select(-g.tfr.pre, -ecl.tfr.pre) %>% 
   mutate_at(vars(starts_with("g.")), funs(replace_na(., 0))) %>% 
   mutate_at(vars(starts_with("i.")), funs(replace_na(., 0))) %>% 
-  mutate(g.check  = gca.op + rowSums(select(., contains("g."))) - gca.cl,
-         i.check  = ecl.op + rowSums(select(., contains("i."))) - ecl.cl)
+  mutate(gca.ch  = gca.op + rowSums(select(., contains("g."))) - gca.cl,
+         ecl.ch  = ecl.op + rowSums(select(., contains("i."))) - ecl.cl)
 
 
 #=========================================================================================
-#==     Gather to long table                                                            ==
+#==     Gather to long table  & apply pre / post rules                                  ==
 #=========================================================================================
 
 bln_mvnt_long <- bln_mvnt %>% select(date, cust, ctgy.cl, ctgy.op, pre.post, gca.cl, 
-                                     ecl.cl, gca.op, ecl.op, gca.m.dd.r:i.tfr_in) %>% 
-  gather(key = "m_ment", value = "tran_ccy1", gca.cl:i.tfr_in) %>% 
+                                     ecl.cl, gca.op, ecl.op, gca.m.dd.r:ecl.m.tfr.i) %>% 
+  gather(key = "m_ment", value = "tran_ccy1", gca.cl:ecl.m.tfr.i) %>% 
   arrange(cust, m_ment, date) %>% filter(tran_ccy1 != 0) %>% 
   mutate(ctgy      = case_when(m_ment == "gca.op" |
                                m_ment == "ecl.op" |
                                m_ment == "gca.m.tfr.o" |
-                               m_ment == "i.tfr_out" |
+                               m_ment == "ecl.m.tfr.o" |
                                m_ment == "gca.m.dd.r" & pre.post == "pre" |
                                m_ment == "gca.m.dd.t" & pre.post == "pre" |
                                m_ment == "gca.m.rd.t.f"   & pre.post == "pre" |
