@@ -128,22 +128,26 @@ bln_mvnt <- bln_ctgy %>% group_by(cust) %>%
 #==     Gather to long table  & apply pre / post rules                                  ==
 #=========================================================================================
 
-bln_mvnt_long <- bln_mvnt %>% select(date, cust, ctgy.cl, ctgy.op, pre.post, gca.cl, 
-                                     ecl.cl, gca.op, ecl.op, gca.m.dd.r:ecl.m.tfr.i) %>% 
-  gather(key = "m_ment", value = "tran_ccy1", gca.cl:ecl.m.tfr.i) %>% 
-  arrange(cust, m_ment, date) %>% filter(tran_ccy1 != 0) %>% 
-  mutate(ctgy      = case_when(m_ment == "gca.op" |
-                               m_ment == "ecl.op" |
-                               m_ment == "gca.m.tfr.o" |
-                               m_ment == "ecl.m.tfr.o" |
-                               m_ment == "gca.m.dd.r" & pre.post == "pre" |
-                               m_ment == "gca.m.dd.t" & pre.post == "pre" |
-                               m_ment == "gca.m.rd.t.f"   & pre.post == "pre" |
-                               m_ment == "gca.m.rd.t" & pre.post == "pre" |
-                               m_ment == "gca.m.rd.r" & pre.post == "pre" ~
-                               ctgy.op,
-                             TRUE ~ ctgy.cl
-  )) 
+bln_mvnt_long <- bln_mvnt %>% 
+  select(date, cust, ctgy.cl, ctgy.op, pre.post, gca.cl, 
+         ecl.cl, gca.op, ecl.op, gca.m.dd.r:ecl.m.tfr.i) %>% 
+  gather(key = "m.ment", value = "tran_ccy1", gca.cl:ecl.m.tfr.i) %>% 
+  arrange(cust, m.ment, date) %>% filter(tran_ccy1 != 0) %>% 
+  mutate(ctgy = case_when(m.ment == "gca.op" |
+                          m.ment == "ecl.op" |
+                          m.ment == "gca.m.tfr.o" |
+                          m.ment == "ecl.m.tfr.o" |
+                          m.ment == "gca.m.dd.r"   & pre.post == "pre" |
+                          m.ment == "gca.m.dd.t"   & pre.post == "pre" |
+                          m.ment == "gca.m.rd.t.f" & pre.post == "pre" |
+                          m.ment == "gca.m.rd.t"   & pre.post == "pre" |
+                          m.ment == "gca.m.rd.r"   & pre.post == "pre" ~
+                          ctgy.op,
+                          TRUE ~ ctgy.cl
+  )) %>% 
+  mutate(bal.type = str_sub(m.ment, 0, 3),
+         m.type   = str_sub(m.ment, 5)) %>% 
+  select(-m.ment)
 
 # TO DO: remove attributes not used (pre.post, ctgy.op/.cl)
 # TO DO: add GCA / ECL attribute based on gca/g. and ecl/i.
@@ -167,8 +171,8 @@ write.csv(bln_mvnt_long, file = "bln_mvnt_long.csv")
 #=========================================================================================
 #==     debugging                                                                       ==
 #=========================================================================================
-cl_dec <- bln_mvnt_long %>% filter(m_ment == "gca.cl" & date == as.Date('2018-02-01'))
-op_jan <- bln_mvnt_long %>% filter(m_ment == "gca.op" & date == as.Date('2018-03-01'))
+cl_dec <- bln_mvnt_long %>% filter(m.ment == "gca.cl" & date == as.Date('2018-02-01'))
+op_jan <- bln_mvnt_long %>% filter(m.ment == "gca.op" & date == as.Date('2018-03-01'))
 dec_jan<- full_join(cl_dec, op_jan, by = "cust") %>% 
   mutate(check = tran_ccy1.x - tran_ccy1.y) %>% 
   filter(check != 0)
