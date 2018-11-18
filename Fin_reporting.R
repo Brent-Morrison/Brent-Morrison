@@ -1,6 +1,7 @@
 # packages
 library("tidyverse")
 library("DescTools")
+library("lubridate")
 
 #=========================================================================================
 #==    Load mock data                                                                   ==
@@ -131,27 +132,31 @@ bln_mvnt <- bln_ctgy %>% group_by(cust) %>%
 bln_mvnt_long <- bln_mvnt %>% 
   select(date, cust, ctgy.cl, ctgy.op, pre.post, gca.cl, 
          ecl.cl, gca.op, ecl.op, gca.m.dd.r:ecl.m.tfr.i) %>% 
-  gather(key = "m.ment", value = "tran_ccy1", gca.cl:ecl.m.tfr.i) %>% 
-  arrange(cust, m.ment, date) %>% filter(tran_ccy1 != 0) %>% 
-  mutate(ctgy = case_when(m.ment == "gca.op" |
-                          m.ment == "ecl.op" |
-                          m.ment == "gca.m.tfr.o" |
-                          m.ment == "ecl.m.tfr.o" |
-                          m.ment == "gca.m.dd.r"   & pre.post == "pre" |
-                          m.ment == "gca.m.dd.t"   & pre.post == "pre" |
-                          m.ment == "gca.m.rd.t.f" & pre.post == "pre" |
-                          m.ment == "gca.m.rd.t"   & pre.post == "pre" |
-                          m.ment == "gca.m.rd.r"   & pre.post == "pre" ~
-                          ctgy.op,
-                          TRUE ~ ctgy.cl
-  )) %>% 
+  gather(key = "m.ment", value = "tran_ccy", gca.cl:ecl.m.tfr.i) %>% 
+  arrange(cust, m.ment, date) %>% filter(tran_ccy != 0) %>% 
   mutate(bal.type = str_sub(m.ment, 0, 3),
          m.type   = str_sub(m.ment, 5)) %>% 
-  select(-m.ment)
+  mutate(ctgy = case_when(m.type == "op" |
+                          m.type == "m.tfr.o" |
+                          m.type == "m.dd.r"   & pre.post == "pre" |
+                          m.type == "m.dd.t"   & pre.post == "pre" |
+                          m.type == "m.rd.t.f" & pre.post == "pre" |
+                          m.type == "m.rd.t"   & pre.post == "pre" |
+                          m.type == "m.rd.r"   & pre.post == "pre" ~
+                          ctgy.op,
+                          TRUE ~ ctgy.cl), 
+         m.type = if_else(str_detect(m.type, "tfr"), 
+                        paste("tfr", ctgy.op, ctgy.cl, sep = "."), 
+                        m.type),
+         year = year(date),
+         month = month(date)) %>% 
+  select(date, year, month, cust, ctgy.op, ctgy.cl, ctgy, bal.type, m.type, tran_ccy) %>% 
+  arrange(cust, date, bal.type)
 
 # TO DO: remove attributes not used (pre.post, ctgy.op/.cl)
 # TO DO: add GCA / ECL attribute based on gca/g. and ecl/i.
 # TO DO: unsure no duplicates over account/company/month
+# TO DO xxx <- bln_mvnt_long %>% mutate(new = if_else(str_detect(m.type, "tfr"), paste("tfr", ctgy.op, ctgy.cl, sep = "."), m.type))
 
 #=========================================================================================
 #==     Write csv                                                                       ==
